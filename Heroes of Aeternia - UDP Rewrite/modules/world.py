@@ -7,11 +7,86 @@ class area():
 
         self.name = name
 
-class tile_row():
+        self.highest_layer = 1
 
-    def __init__(self,contents = [],parent = None,y = 0):
+    def update_draw_order(self):
 
-        self.contents = contents
+        highest_layer = []
+
+        for obj in self.contents:
+
+            highest_layer.append(obj.position[2])
+
+        self.highest_layer = max(highest_layer)
+
+    def draw(self):
+
+        self.update_draw_order()
+
+        for layer in range(0,self.highest_layer+1):
+
+            for obj in self.contents:
+
+                if obj.position[2] == layer:
+
+                    try:
+
+                        obj.draw()
+
+                    except:
+
+                        print("drawException: Tried to draw non-drawable object")
+
+    def add_object(self,obj=None):
+
+        if obj != None:
+
+            self.contents.append(obj)
+
+        
+
+class hitbox():
+
+    def __init__(self,position = [0,0],size = [64,32],parent = None):
+
+        self.position = position
+
+        self.size = size
+
+        self.parent = parent
+
+    def check(self,x=None,y=None): # check(self) before you wreck(self)
+
+        if x != None and y != None:
+
+            if x >= self.position[0] and x <= self.position[0] + self.size[0]:
+
+                print("x match" + str(self.position))
+
+                if y >= self.position[1] and y <= self.position[1] + self.size[1]:
+
+                    print("x + y match" + str(self.sprite.position))
+
+            if y >= self.position[1] and y <= self.position[1] + self.size[1]:
+
+                print("y match" + str(self.self.position))
+
+    def update(self,new_position = [0,0],new_size = None):
+
+        if self.parent != None:
+
+            self.position = parent.base_pixel_position
+
+        else:
+
+            new_position = [0,0]
+
+        if new_size != None:
+
+            self.size = new_size
+
+
+            
 
 class tile():
 
@@ -19,7 +94,7 @@ class tile():
 
         self.position = position # grid x, grid y, layer (z), pixel x base, pixel y base
 
-        #self.pixel_base_position = [self.position[0] *  TBD
+        self.base_pixel_position = [self.position[0] * 64,self.position[1] * 32]
 
         self.sprite_path = sprite_path
 
@@ -30,8 +105,6 @@ class tile():
         self.parent_id = parent_id
 
         self.sprite = sprite
-
-        self.hitbox = hitbox
 
         self.opacity = opacity
 
@@ -75,20 +148,9 @@ class tile():
 
                 pass
 
-    def update_mouse(self,x=0,y=0,click=False):
-
-        if x >= self.sprite.position[0] and x <= self.sprite.position[0] + self.hitbox[0]:
-
-            print("x match" + str(self.sprite.position))
-
-            if y >= self.sprite.position[1] and y <= self.sprite.position[1] + self.hitbox[1]:
-
-                print("x + y match" + str(self.sprite.position))
-
-        if y >= self.sprite.position[1] and y <= self.sprite.position[1] + self.hitbox[1]:
-
-            print("y match" + str(self.sprite.position))
-
+##    def update_mouse(self,x=0,y=0,click=False):
+##
+##        
         
 
 

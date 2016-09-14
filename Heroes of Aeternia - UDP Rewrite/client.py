@@ -61,13 +61,13 @@ window = pyglet.window.Window(width=600,height=480,caption="Nightfall - Heroes o
 
 class sprite():
 
-    def __init__(self,parent=None,sprite_path = ".//sprites//entities//t8_wildcat.png",position = [0,0,0,0,0],visible=True,opacity=255,layer=0):
+    def __init__(self,parent=None,sprite_path = ".//sprites//entities//t8_wildcat.png",base_position = [0,0],layer = 0, offset = [0,0],visible=True,opacity=255):
 
         self.parent = parent
 
         if parent == None:
 
-            self.position = position # [x y layer temp_x_offset temp_y_offset], where lower layer = further back
+            self.base_position = base_position # [x y] in pixels
 
             self.sprite_path = sprite_path
 
@@ -81,7 +81,7 @@ class sprite():
 
                 self.sprite_path = self.parent.sprite_path
 
-                self.position = [self.parent.position[3],self.parent.position[4],0]
+                self.base_position = self.parent.base_pixel_position
 
                 self.opacity = self.parent.opacity
 
@@ -91,9 +91,13 @@ class sprite():
 
                 pass
 
+        self.layer = layer  # lower layer = further back
+
+        self.offset = offset # [x y] in pixels
+
         self.image = pyglet.image.load(self.sprite_path)
 
-        self.sprite = pyglet.sprite.Sprite(self.image,self.position[0],self.position[1])
+        self.sprite = pyglet.sprite.Sprite(self.image,self.base_position[0] + self.offset[0],self.base_position[1] + self.offset[1])
 
         self.sprite.opacity = self.opacity
 
@@ -102,7 +106,9 @@ class sprite():
 
         if self.parent != None:
 
-            self.update_parent()
+            #self.update_parent()
+
+            pass
 
         if self.visible == True:
             
@@ -116,11 +122,11 @@ class sprite():
 
             self.image = pyglet.image.load(self.sprite_path)
 
-            self.sprite = pyglet.sprite.Sprite(self.image,self.position[0] + self.position[3],self.position[1] + self.position[4])
+##            self.sprite = pyglet.sprite.Sprite(self.image,self.base_position[0] + self.offset[0],self.base_position[1] + base_self.offset[1])
 
-        else:
+            self.sprite.image = self.image
 
-            self.sprite.position = (self.position[0] + self.position[3],self.position[1] + self.position[4])
+        self.sprite.position = (self.base_position[0] + self.offset[0],self.base_position[1] + self.offset[1])
 
         self.sprite.opacity = self.opacity
 
@@ -142,9 +148,7 @@ class sprite():
 
                 self.sprite_path = self.parent.sprite_path
 
-                self.position[0] = self.parent.position[0] * 64
-
-                self.position[1] = self.parent.position[1] * 32
+                self.base_position = self.parent.base_pixel_position 
 
                 self.opacity = self.parent.opacity
 
@@ -157,9 +161,8 @@ class sprite():
             
         self.update_sprite(new_image)
 
-game_objects = [world.tile(position=[4,0,0],sprite=sprite())]
+game_objects = [world.area(contents=[world.tile(position=[4,0,1],sprite=sprite()),world.tile(position=[4,1,0],sprite=sprite())])]
 
-game_objects.append(world.tile(position=[5,0,0],sprite=sprite()))
 
 @window.event
 def on_close():
@@ -213,7 +216,9 @@ def on_mouse_motion(x, y, dx, dy):
 
     for game_obj in game_objects:
 
-        game_obj.update_mouse(x,y)
+        #game_obj.update_mouse(x,y)
+
+        pass
     
     mouse_position = [x,y]
 
@@ -226,7 +231,9 @@ def on_mouse_press(x, y, button, modifiers):
 
     for obj in game_objects:
 
-        obj.update_sprite()
+        #obj.update_sprite()
+
+        pass
 
         
 pyglet.app.run()
