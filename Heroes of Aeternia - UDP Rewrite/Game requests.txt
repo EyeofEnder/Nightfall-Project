@@ -1,0 +1,22 @@
+game request types:
+
+chat_local
+chat_global
+chat_team
+chat_enemy
+chat_npc
+
+attack
+ability
+
+item_changeslot
+item_use
+
+move
+
+change_skill
+
+place_block
+remove_block
+change_bsetting
+
