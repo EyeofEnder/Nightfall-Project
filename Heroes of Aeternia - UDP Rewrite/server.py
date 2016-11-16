@@ -4,6 +4,12 @@ sys.path.append("pyglet-1.2.4.whl")
 
 import pyglet
 
+import modules.world as world
+
+import modules.utilities as util
+
+import modules.player as player
+
 main_socket = socket.socket(socket.AF_INET,socket.SOCK_DGRAM)
 
 main_socket.bind(("",50000))
@@ -14,6 +20,8 @@ requests = []
 
 world_time = [0,0,0,0] # year, day, hour, minute
 
+areas = []
+
 def net_io(dt):
 
     global requests
@@ -22,7 +30,7 @@ def net_io(dt):
 
         msg, addr = main_socket.recvfrom(8192)
 
-        msg = msg.decode("ascii")
+        msg = msg.decode("utf-8")
 
         if msg != "":
 
@@ -36,7 +44,7 @@ def net_io(dt):
 
         if req[2] == 3:
 
-            out_msg = req[0].encode("ascii")
+            out_msg = req[0].encode("utf-8")
 
             requests.remove(req)
 
@@ -44,7 +52,7 @@ def net_io(dt):
 
             out_msg = "None"
 
-            out_msg = out_msg.encode("ascii")
+            out_msg = out_msg.encode("utf-8")
 
 
         main_socket.sendto(out_msg,req[1])
@@ -62,7 +70,7 @@ def process_messages(dt):
 
         else:
 
-            req[0] += " echo"
+            req[0] = "echo " + req[0]
 
         req[2] = 3
 

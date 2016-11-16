@@ -2,6 +2,16 @@ import socket,random,time,sys
 
 import modules.world as world
 
+import modules.interface as interface
+
+import modules.utilities as util
+
+import modules.items as items
+
+import modules.entities as ent
+
+import modules.sprite as sprite
+
 sys.path.append("pyglet-1.2.4.whl")
 
 import pyglet
@@ -24,6 +34,34 @@ mouse_position = [0,0]
 
 username = "EyeofEnder"
 
+current_character = None
+
+highest_graphic_layer = 2
+
+gui_objects = [] 
+
+output_focus = "game"
+
+my_turn = [True,100]
+
+item = items.item()
+
+slot1 = items.item_slot(item = item)
+
+slot2 = items.item_slot()
+
+print(slot1.item)
+print(slot2.item)
+
+slot1.move_item(slot2)
+
+print(slot1.item)
+print(slot2.item)
+
+title_text = util.read_text_file("lang/title_en.txt",False)
+
+title_text = title_text.split("\n")
+
 def net_io(dt):
 
     global main_socket, io_out, io_in
@@ -36,7 +74,7 @@ def net_io(dt):
 
         msg = ""
 
-    msg = msg.encode("ascii")
+    msg = msg.encode("utf-8")
 
     main_socket.sendto(msg,("localhost",50000))
 
@@ -44,122 +82,36 @@ def net_io(dt):
 
         in_msg,addr = main_socket.recvfrom(8192)
 
-        in_msg = in_msg.decode("ascii")
+        in_msg = in_msg.decode("utf-8")
 
         if in_msg != "None":
 
-            print(in_msg)
+            io_in.append(in_msg)
+
+            print(io_in)
 
     except:
 
         pass
+    
+new_area = world.area(graphic_layer=5)
 
-pyglet.clock.schedule_interval(net_io,0.01)
+new_area.add_object(world.tile(position=[0,0,1]))
 
-window = pyglet.window.Window(width=600,height=480,caption="Nightfall - Heroes of Aeternia Pre-alpha",resizable=True)
-        
+new_area.add_object(world.tile(position=[0,0,0]))
 
-class sprite():
+new_area.add_object(ent.combat_entity(position=[10,0,10]))
 
-    def __init__(self,parent=None,sprite_path = ".//sprites//entities//t8_wildcat.png",position = [0,0,0,0,0],visible=True,opacity=255,layer=0):
+current_area = new_area
 
-        self.parent = parent
-
-        if parent == None:
-
-            self.position = position # [x y layer temp_x_offset temp_y_offset], where lower layer = further back
-
-            self.sprite_path = sprite_path
-
-            self.visible = visible
-
-            self.opacity = opacity
-
-        if parent != None:
-
-            try:
-
-                self.sprite_path = self.parent.sprite_path
-
-                self.position = [self.parent.position[3],self.parent.position[4],0]
-
-                self.opacity = self.parent.opacity
-
-                self.visible = visible
-
-            except:
-
-                pass
-
-        self.image = pyglet.image.load(self.sprite_path)
-
-        self.sprite = pyglet.sprite.Sprite(self.image,self.position[0],self.position[1])
-
-        self.sprite.opacity = self.opacity
-
-    def draw(self):
+##gui = interface.gui()
+##
+##gui.add_component(interface.sprite_component(sprite=sprite()))
+##
+##game_objects.append(gui)
 
 
-        if self.parent != None:
-
-            self.update_parent()
-
-        if self.visible == True:
-            
-            self.update_sprite()
-
-            self.sprite.draw()
-
-    def update_sprite(self,new_image = False):
-
-        if new_image == True:
-
-            self.image = pyglet.image.load(self.sprite_path)
-
-            self.sprite = pyglet.sprite.Sprite(self.image,self.position[0] + self.position[3],self.position[1] + self.position[4])
-
-        else:
-
-            self.sprite.position = (self.position[0] + self.position[3],self.position[1] + self.position[4])
-
-        self.sprite.opacity = self.opacity
-
-        
-
-    def update_parent(self, new_parent = None, new_image = False):
-
-        if new_parent != None:
-
-            self.parent = new_parent
-
-        if self.parent == None:
-
-            pass
-
-        if self.parent != None:
-
-            try:
-
-                self.sprite_path = self.parent.sprite_path
-
-                self.position[0] = self.parent.position[0] * 64
-
-                self.position[1] = self.parent.position[1] * 32
-
-                self.opacity = self.parent.opacity
-
-                self.visible = visible
-                
-            except:
-
-
-                pass
-            
-        self.update_sprite(new_image)
-
-game_objects = [world.tile(position=[4,0,0],sprite=sprite())]
-
-game_objects.append(world.tile(position=[5,0,0],sprite=sprite()))
+window = pyglet.window.Window(width=1200,height=960,caption="Nightfall - Heroes of Aeternia : " + random.choice(title_text),resizable=True)
 
 @window.event
 def on_close():
@@ -168,52 +120,92 @@ def on_close():
 
 @window.event
 def on_text(text):
-
     global input_text
 
-    input_text += text
+    if output_focus == "chat":
+
+        input_text += text
 
 @window.event
 def on_key_press(keys,modifiers):
 
-    global input_text, io_out
+    global input_text, io_out, output_focus
 
-    print("Input detected.")
+    print(keys)
+
+    recent_key =""
+
+    if output_focus == "game":
+
+        if keys == 119:  # w press
+
+            print("w")
+
+            recent_key ="w"
+
+        if keys == 97: # a
+
+            print("a")
+
+            recent_key ="a"
+
+        if keys == 115: # s
+
+            print("s")
+
+            recent_key ="s"
+
+        if keys == 100: # d
+
+            print("d")
+
+            recent_key ="d"
 
     if keys == 65293:  # on enter press
 
-        print(input_text)
+        if output_focus == "game":
 
-        io_out.append("chat_local " + username + " " + input_text.replace("\r",""))
+            output_focus = "chat"
 
-        print(io_out)
+        elif output_focus == "chat":
 
-        input_text = ""
+            print(input_text)
+
+            io_out.append("chat_local " + username + " " + input_text.replace("\r",""))
+
+            print(io_out)
+
+            input_text = ""
+
+            output_focus = "game"
 
     if keys == 65288:   # on backspace press
 
         input_text = input_text[:-1]
 
+    io_out.append(username + " " + recent_key)
+
+                    
+
+
 @window.event
 def on_draw():
-
+    
     #print(pyglet.clock.get_fps())
 
     window.clear()
 
-    for game_obj in game_objects:
+    for gui_obj in gui_objects:
 
         game_obj.draw()
+
+    current_area.draw()
 
 
 @window.event
 def on_mouse_motion(x, y, dx, dy):
 
     global mouse_position
-
-    for game_obj in game_objects:
-
-        game_obj.update_mouse(x,y)
     
     mouse_position = [x,y]
 
@@ -224,11 +216,9 @@ def on_mouse_press(x, y, button, modifiers):
 
     print("Click. x = {0}, y = {1}".format(x,y))
 
-    for obj in game_objects:
 
-        obj.update_sprite()
+pyglet.clock.schedule_interval(net_io,0.01)
 
-        
 pyglet.app.run()
 
 
