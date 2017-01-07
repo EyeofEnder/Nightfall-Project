@@ -1,8 +1,8 @@
-import socket,random,time,sys
+import socket,random,time,sys,random
 
 import modules.world as world
 
-import modules.interface as interface
+import modules.gui as gui
 
 import modules.utilities as util
 
@@ -12,6 +12,8 @@ import modules.entities as ent
 
 import modules.sprite as sprite
 
+import modules.draw_obj as dobj
+
 sys.path.append("pyglet-1.2.4.whl")
 
 import pyglet
@@ -20,17 +22,19 @@ main_socket = socket.socket(socket.AF_INET,socket.SOCK_DGRAM)
 
 main_socket.setblocking(0)
 
-client_id = random.randrange(1,1000)
-
 io_out = []
 
 io_in = []
+
+window_size = [1200,960]
 
 current_area = None
 
 input_text = ""
 
 mouse_position = [0,0]
+
+last_click = [0,0]
 
 username = "EyeofEnder"
 
@@ -42,25 +46,13 @@ gui_objects = []
 
 output_focus = "game"
 
-my_turn = [True,100]
-
-item = items.item()
-
-slot1 = items.item_slot(item = item)
-
-slot2 = items.item_slot()
-
-print(slot1.item)
-print(slot2.item)
-
-slot1.move_item(slot2)
-
-print(slot1.item)
-print(slot2.item)
-
 title_text = util.read_text_file("lang/title_en.txt",False)
 
 title_text = title_text.split("\n")
+
+loaded_sprites = []
+
+recent_key = None
 
 def net_io(dt):
 
@@ -93,25 +85,34 @@ def net_io(dt):
     except:
 
         pass
-    
-new_area = world.area(graphic_layer=5)
 
-new_area.add_object(world.tile(position=[0,0,1]))
+new_area = world.area()
 
-new_area.add_object(world.tile(position=[0,0,0]))
+#for n in range(1,50):
 
-new_area.add_object(ent.combat_entity(position=[10,0,10]))
+#   new_area.add_object(world.create_tile_line([50+n,0],[50+n,20]))
+
+new_area.add_object(world.create_tile_line([0,0],[0,10]))
+
+new_area.add_object(world.create_tile_line([0,0],[10,0]))
+
+new_area.add_object(world.create_tile_line([0,10],[10,10]))
+
+new_area.add_object(world.create_tile_line([10,0],[10,10]))
+
+new_area.add_object(world.grass_tile([0,0]))
+
+new_area.add_object(world.create_tile_structure([[10,10],[11,10],[9,10],[10,11],[10,9]]))
+
+new_area.add_object(ent.entity(coords=[3,1],inventory_slots=[items.item_slot(name="current_weapon",item=items.weapon(name="Shatter Strike",base_acc=25,base_dmg=120))],health=[1000,1000]))
+
+new_area.add_object(ent.entity(name="Nightfall Harpy Striker",coords=[6,2],inventory_slots=[items.item_slot(name="current_weapon",item=items.weapon())]))
 
 current_area = new_area
 
-##gui = interface.gui()
-##
-##gui.add_component(interface.sprite_component(sprite=sprite()))
-##
-##game_objects.append(gui)
+window = pyglet.window.Window(width=window_size[0],height=window_size[1],caption="Nightfall - Heroes of Aeternia : " + random.choice(title_text),resizable=True)
 
-
-window = pyglet.window.Window(width=1200,height=960,caption="Nightfall - Heroes of Aeternia : " + random.choice(title_text),resizable=True)
+fps_display = pyglet.window.FPSDisplay(window)
 
 @window.event
 def on_close():
@@ -129,9 +130,11 @@ def on_text(text):
 @window.event
 def on_key_press(keys,modifiers):
 
-    global input_text, io_out, output_focus
+    global input_text, io_out, output_focus,last_button,recent_key
 
     print(keys)
+
+    last_button = keys
 
     recent_key =""
 
@@ -184,40 +187,72 @@ def on_key_press(keys,modifiers):
         input_text = input_text[:-1]
 
     io_out.append(username + " " + recent_key)
-
                     
+def tick(dt):
 
+    global recent_key,output_focus
+
+    current_area.tick(round(dt,4)*1000)
+
+    if output_focus == "game":
+
+        current_area.set_debug_value(recent_key)
+
+    recent_key = None
+
+    
 
 @window.event
 def on_draw():
-    
+
+    global mouse_position,window_size,fps_display
+
     #print(pyglet.clock.get_fps())
 
     window.clear()
 
+    current_area.draw(last_click,window_size)
+
     for gui_obj in gui_objects:
 
-        game_obj.draw()
+        gui_obj.draw()
 
-    current_area.draw()
-
-
+    fps_display.draw()
+    
 @window.event
 def on_mouse_motion(x, y, dx, dy):
 
     global mouse_position
-    
-    mouse_position = [x,y]
 
-    #print(mouse_position)
+    mouse_position = [x,y]
     
 @window.event
 def on_mouse_press(x, y, button, modifiers):
 
-    print("Click. x = {0}, y = {1}".format(x,y))
+    global last_click
+
+    last_click = [x,y]
+
+    
+
+@window.event
+def on_mouse_drag(x, y, dx, dy, buttons, modifiers):
+
+    current_area.offset([dx,dy])
+
+@window.event
+def on_resize(width,height):
+
+    global window_size
+
+    window_size = [width,height]
+
+    print(window_size)
 
 
 pyglet.clock.schedule_interval(net_io,0.01)
+
+pyglet.clock.schedule_interval(tick,0.1)
 
 pyglet.app.run()
 

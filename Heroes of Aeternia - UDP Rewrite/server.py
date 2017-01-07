@@ -10,6 +10,10 @@ import modules.utilities as util
 
 import modules.player as player
 
+import modules.entities as entities
+
+import modules.items as items
+
 main_socket = socket.socket(socket.AF_INET,socket.SOCK_DGRAM)
 
 main_socket.bind(("",50000))
@@ -111,7 +115,9 @@ def game_tick(dt):
 
     global areas
 
-    pass
+    for area in areas:
+
+        area.tick(dt)
 
 
 pyglet.clock.schedule_interval(net_io,0.01)
