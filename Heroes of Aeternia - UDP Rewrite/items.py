@@ -14,61 +14,42 @@ import pyglet
 
 from . import draw_obj as d_obj
 
+class inv_slot(d_obj.draw_obj):
 
-class item_slot():
+    def __init__(self,item=None,name="test_slot",sprites={"default":".//sprites//item_slot.png"},position=[0,0]):
 
-    def __init__(self,parent=None,item=None,name = "inv01",has_item=False,sprites={"default":"sprites/item_slot.png"},position = [0,0],visible = True):
+        self.name = name
 
         self.item = item
 
-        self.parent = parent
+        d_obj.draw_obj.__init__(self,sprites=sprites,position=position)
 
-        self.name = name
-        
-        self.position = position
-
-        self.sprites = sprites
-
-        self.visible = visible
-
-        if self.item != None:
-
-            self.has_item = True
-
-        else:
-
-            self.has_item = False
+        self.module = "items"
 
     def draw(self):
 
-        if self.visible:
+        d_obj.draw_obj.draw()
 
-            self.sprite.draw()
+        if self.item != None:
 
-            #self.item.draw()
+            self.item.position = self.position
 
-    def remove_item(self):
+            self.item.draw()
 
-        self.item = None
+##    def to_string(self):
+##
+##        s = "items.inv_slot(name='{}',item={})".format(self.name,"items."+self.item.to_string())
+##
+##        return s
+            
 
-        self.has_item = False
+class item(d_obj.draw_obj):
 
-    def move_item(self,target_slot=None):
-
-        self.item.move(target_slot)
-
-        target_slot.has_item = True
-
-        target_slot.item = self.item
-
-        self.remove_item()
-
-
-class item():
-
-    def __init__(self,name="test item please ignore",count=[1,100],sprite_path=None,parent=None,tags=[]):
+    def __init__(self,name="test item please ignore",count=[1,100],sprites = {"default":".//sprites//weapons//lauras_sword.png"},parent=None,tags=[]):
 
         self.name = name
+
+        d_obj.draw_obj.__init__(self,sprites=sprites)
 
         self.parent = parent
 
@@ -78,9 +59,13 @@ class item():
 
         self.tags = tags
 
-        self.sprite_path = sprite_path
+        self.module = "items"
 
-        self.sprite = sprite.sprite()
+    def tick(self,dt=100):
+
+##        print(self.name)
+
+        pass
 
     def draw(self):
 
@@ -91,6 +76,18 @@ class item():
     def move(self,new_parent=None):
 
         self.parent = new_parent
+
+    def attack(self,user=None,target=None,area=None,distance=None):
+
+        print("It's not very effective...")
+
+        taken = target.take_damage(damage="no_damage",weapon=self,attacker=user)
+
+##    def to_string(self):
+##
+##        out = "item(name='{}',count={},sprites={},parent=None,tags={})".format(self.name,str(self.count),str(self.sprites),str(self.tags))
+##
+##        return out
 
 class item_sprite(d_obj.draw_obj):
 
@@ -109,9 +106,9 @@ class item_sprite(d_obj.draw_obj):
 
 class weapon(item):
 
-    def __init__(self,name="One-Punch Gloves",count=[1,1],sprite_path=None,parent=None,tags=[],dmg_falloff = [[0,100],[100,50]],max_range = 50,acc_falloff = [[0,100],[100,20]],base_acc=60,base_dmg=12,base_pen=82):
+    def __init__(self,name="One-Punch Gloves",count=[1,1],sprites={"default":".//sprites//weapons//lauras_sword.png"},parent=None,tags=[],dmg_falloff = [[0,100],[100,50]],max_range = 50,acc_falloff = [[0,100],[100,20]],base_acc=60,base_dmg=12,base_pen=82,fire_rate=10):
 
-        item.__init__(self,name=name,count=count,sprite_path=sprite_path,parent=parent,tags=tags)
+        item.__init__(self,name=name,count=count,sprites=sprites,parent=parent,tags=tags)
 
         self.dmg_falloff = dmg_falloff
 
@@ -125,23 +122,62 @@ class weapon(item):
 
         self.max_range = max_range
 
-    def attack(self,user=None,target=None):
+        self.fire_rate = fire_rate # attacks / turn point
+
+    def attack(self,user=None,target=None,distance=None,area=None):
+
+        if distance == None:
+
+            distance = math.sqrt((user.coords[0]-target.coords[0])**2 + (user.coords[1]-target.coords[1])**2 + (user.coords[1]-target.coords[1])**2)
+
+##        print("Range:"+str(distance))
+
+##        print(area.name)
 
         rand = random.randrange(1,101)
 
-        print(target.name)
-
         if rand <= self.base_acc:
 
-            print("Hit!")
+            taken = target.take_damage(damage=self.base_dmg,weapon=self,attacker=user)
 
-            target.take_damage(target.health[0])
+            hit = True
 
         else:
 
+            taken = target.take_damage(damage="miss",weapon=self,attacker=user)
+
             print("Miss!")
 
+            hit = False
 
+
+class placeholder_weapon(weapon):
+
+    def __init__(self,name="His/Her Bare Hands",max_range=1,base_dmg=5,base_pen=10,fire_rate=15):
+
+        weapon.__init__(self,name=name,max_range=max_range,base_dmg=base_dmg,base_pen=base_pen,fire_rate=fire_rate)
+
+    def tick(self,dt=100):
+
+        weapon.tick(self,dt=dt)
+
+##        if self.parent.gender=="female":
+##
+##            prefix = "Her"
+##
+##        if self.parent.gender=="male":
+##
+##            prefix="His"
+##
+##        if self.parent.race=="harpy":
+##
+##            part="Wings"
+##
+##        else:
+##
+##            part="Hands"
+##
+##        self.name = "{} Bare {}".format(prefix,part)
 
 
         

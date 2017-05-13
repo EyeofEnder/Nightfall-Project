@@ -8,11 +8,13 @@ import modules.utilities as util
 
 import modules.items as items
 
-import modules.entities as ent
+import modules.entities as entities
 
 import modules.sprite as sprite
 
-import modules.draw_obj as dobj
+import modules.draw_obj as draw_obj
+
+import pickle
 
 sys.path.append("pyglet-1.2.4.whl")
 
@@ -32,25 +34,29 @@ current_area = None
 
 input_text = ""
 
+output_focus = "game"
+
 mouse_position = [0,0]
 
 last_click = [0,0]
 
-username = "EyeofEnder"
+in_game = True
 
-current_character = None
-
-highest_graphic_layer = 2
-
-gui_objects = [] 
-
-output_focus = "game"
-
-title_text = util.read_text_file("lang/title_en.txt",False)
+title_text = util.read_text_file("lang/title_en.ne",False)
 
 title_text = title_text.split("\n")
 
-loaded_sprites = []
+key_map = {119:"w",
+           97:"a",
+           115:"s",
+           100:"d",
+           113:"q",
+           65293:"enter",
+           32:"space",
+           65288:"backspace",
+           65505:"l_shift",
+           114:"r",
+           102:"f"}
 
 recent_key = None
 
@@ -86,29 +92,58 @@ def net_io(dt):
 
         pass
 
+print("starting tostring")
+
+test = str(current_area)
+
+print("tostring complete")
+
+##test_item = ent.entity(inv_slots=[items.inv_slot(name="kek",item=items.item())])
+##
+##s = "s = ent."+test_item.to_string()
+##
 new_area = world.area()
+##
+##print(s)
+##
+##exec(s)
 
-#for n in range(1,50):
+new_area.generate()
 
-#   new_area.add_object(world.create_tile_line([50+n,0],[50+n,20]))
+new_area.add_object(world.item_drop(inv_slots=[items.inv_slot(item=items.weapon(base_dmg=10000000),name="slot0")],coords=[1,1,1]))
 
-new_area.add_object(world.create_tile_line([0,0],[0,10]))
+##new_area.add_object(entities.entity(name="Nightfall Harpy Striker 1",coords=[4,5,0],inv_slots={"current_weapon":items.item(name="Wet Pool Noodle")},health=[500,500]))
+##
+##new_area.add_object(entities.entity(name="Nightfall Harpy Striker 2",coords=[1,2,0],inv_slots={"current_weapon":items.weapon(name="""Royal Armories "Draco" Pattern Longsword""",base_acc=50,base_dmg=130,fire_rate=5)},health=[500,500]))
+##
+##new_area.add_object(entities.entity(name="Nightfall Harpy Striker 3",coords=[4,1,0],inv_slots={"current_weapon":items.weapon(name="N-4 CQC Knife",base_acc=60,base_dmg=25,fire_rate = 20)},health=[500,500]))
 
-new_area.add_object(world.create_tile_line([0,0],[10,0]))
+new_area.add_object(entities.dummy(coords=[3,3,1],health=[10000000,10000000]))
 
-new_area.add_object(world.create_tile_line([0,10],[10,10]))
+new_area.add_object(entities.entity(coords=[3,2,1],health=[10000000,10000000]))
 
-new_area.add_object(world.create_tile_line([10,0],[10,10]))
+current_character = entities.player_test(coords=[3,1,0],inv_slots=[items.inv_slot(name="current_weapon",item=items.weapon(name="Armorspike Mk.2",base_acc=55,base_dmg=35,fire_rate=17))],health=[1000,1000])
 
-new_area.add_object(world.grass_tile([0,0]))
+new_area.add_object(current_character)
 
-new_area.add_object(world.create_tile_structure([[10,10],[11,10],[9,10],[10,11],[10,9]]))
+print("---------------------------- AREA TEXT START -----------------------------------")
 
-new_area.add_object(ent.entity(coords=[3,1],inventory_slots=[items.item_slot(name="current_weapon",item=items.weapon(name="Shatter Strike",base_acc=25,base_dmg=120))],health=[1000,1000]))
+s = new_area.to_string()
 
-new_area.add_object(ent.entity(name="Nightfall Harpy Striker",coords=[6,2],inventory_slots=[items.item_slot(name="current_weapon",item=items.weapon())]))
+print(s)
+
+test_area = world.area()
+
+##print(test_area)
+
+print("---------------------------- AREA TEXT END -----------------------------------")
 
 current_area = new_area
+
+current_area.player = current_character
+
+##
+##print(s.name,s.item.name)
 
 window = pyglet.window.Window(width=window_size[0],height=window_size[1],caption="Nightfall - Heroes of Aeternia : " + random.choice(title_text),resizable=True)
 
@@ -130,7 +165,7 @@ def on_text(text):
 @window.event
 def on_key_press(keys,modifiers):
 
-    global input_text, io_out, output_focus,last_button,recent_key
+    global input_text, io_out, output_focus,last_button,recent_key,key_map
 
     print(keys)
 
@@ -138,31 +173,41 @@ def on_key_press(keys,modifiers):
 
     recent_key =""
 
-    if output_focus == "game":
+    try:
 
-        if keys == 119:  # w press
+        key_str = key_map[keys]
 
-            print("w")
+    except:
 
-            recent_key ="w"
+        print("Key mapping error, key number:" + str(keys))
 
-        if keys == 97: # a
+        key_str = "Error"
 
-            print("a")
+    print("Map:" + key_str)
 
-            recent_key ="a"
+    recent_key = key_str
 
-        if keys == 115: # s
+    if in_game:
 
-            print("s")
+        if key_str == "w":  # w press
 
-            recent_key ="s"
+            current_character.move_attack([0,1,0])
 
-        if keys == 100: # d
+        if key_str == "a": # a
 
-            print("d")
+            current_character.move_attack([-1,0,0])
 
-            recent_key ="d"
+        if key_str == "s": # s
+
+            current_character.move_attack([0,-1,0])
+
+        if key_str == "d": # d
+
+            current_character.move_attack([1,0,0])
+
+        if key_str == "q": # q
+
+            current_character.attack_selected()
 
     if keys == 65293:  # on enter press
 
@@ -174,7 +219,7 @@ def on_key_press(keys,modifiers):
 
             print(input_text)
 
-            io_out.append("chat_local " + username + " " + input_text.replace("\r",""))
+            io_out.append("chat_local " + input_text.replace("\r",""))
 
             print(io_out)
 
@@ -182,21 +227,49 @@ def on_key_press(keys,modifiers):
 
             output_focus = "game"
 
+    if keys == 32: # spacebar
+
+        current_area.current_z += 1
+
+        current_area.offset_func([0,64])
+
     if keys == 65288:   # on backspace press
 
         input_text = input_text[:-1]
 
-    io_out.append(username + " " + recent_key)
+    if keys == 65505: # left shift
+
+        current_area.current_z -= 1
+
+        current_area.offset_func([0,-64])
+
+    if keys == 114: # r
+
+        current_character.move_attack([0,0,1])
+
+        current_area.current_z += 1
+
+    if keys == 102: # f
+
+        current_character.move_attack([0,0,-1])
+
+        current_area.current_z -= 1
+ 
+    io_out.append(recent_key)
                     
 def tick(dt):
 
     global recent_key,output_focus
 
-    current_area.tick(round(dt,4)*1000)
+    if current_area != None:
+
+        current_area.tick(round(dt,4)*1000)
 
     if output_focus == "game":
 
-        current_area.set_debug_value(recent_key)
+##        current_area.set_debug_value(recent_key)
+
+        pass
 
     recent_key = None
 
@@ -209,15 +282,23 @@ def on_draw():
 
     #print(pyglet.clock.get_fps())
 
+    t1 = time.time()
+
     window.clear()
 
-    current_area.draw(last_click,window_size)
+    if current_area != None:
 
-    for gui_obj in gui_objects:
+        current_area.draw(last_click,window_size)
 
-        gui_obj.draw()
+    t1a = time.time()
 
     fps_display.draw()
+
+    t2 = time.time()
+
+##    print("total dt: {}".format(t2-t1))
+
+##    print("draw time: {}".format(t1a-t1))
     
 @window.event
 def on_mouse_motion(x, y, dx, dy):
@@ -227,18 +308,23 @@ def on_mouse_motion(x, y, dx, dy):
     mouse_position = [x,y]
     
 @window.event
-def on_mouse_press(x, y, button, modifiers):
+def on_mouse_press(x, y, button, modifiers): # 1: left button, 4: right button
 
     global last_click
 
+    print(button)
+
     last_click = [x,y]
+
+    current_area.click([x,y],button)
 
     
 
 @window.event
 def on_mouse_drag(x, y, dx, dy, buttons, modifiers):
 
-    current_area.offset([dx,dy])
+    current_area.drag(position=[x,y],delta=[dx,dy])
+
 
 @window.event
 def on_resize(width,height):
@@ -248,7 +334,6 @@ def on_resize(width,height):
     window_size = [width,height]
 
     print(window_size)
-
 
 pyglet.clock.schedule_interval(net_io,0.01)
 

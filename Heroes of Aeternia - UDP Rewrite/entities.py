@@ -1,128 +1,135 @@
 import modules.world as world
 
 import modules.items as items
-import sys
-import math
+
+import sys,math,random
 
 from . import sprite as sprite
 
 from . import draw_obj as d_obj
 
+from . import utilities as util
+
+from . import gameplay as gp
+
 sys.path.append("pyglet-1.2.4.whl")
 
 import pyglet
 
-import random
-
 class entity(world.grid_obj):
 
-    def __init__(self,name="Storm",sprites={"default":".//sprites//entities//storm.png"},coords=[0,0],tags=[["impassable"],["passive"]],visible=True,inventory_slots=[],level=1,health=[100,100]):
+    def __init__(self,name="Storm",sprites={"default":".//sprites//entities//storm.png"},coords=[0,0,0],tags=[["impassable"],["passive"]],visible=True,inv_slots=[items.inv_slot(item=items.placeholder_weapon(),name="current_weapon")],level=1,health=[100,100],speed=5):
 
-        world.grid_obj.__init__(self,sprites=sprites,coords=coords,tags=tags,visible=visible)
-        
-        self.inventory_slots = inventory_slots
+        world.grid_obj.__init__(self,sprites=sprites,coords=coords,tags=tags,visible=visible,inv_slots=inv_slots)
+
+        self.module = "entities"
 
         self.name = name
-
-        weapon = self.search_slot("current_weapon")
-        
-        self.active_weapon = weapon.item
 
         self.obj_type = "entity"
         
         self.level = level
 
-        self.my_turn = True
-
         self.pending_actions = []
 
         self.is_alive = True
 
-    def move(self,direction=[0,0]):
+        self.turn_info = {"priority":1,"points":[1,1],"my_turn":True}
 
-        passable = self.check_passable(direction)
+        self.health = health
 
-        if passable:
+        self.speed = speed   # [speed] = u/turn point
 
-            self.coords[0] += direction[0]
+        self.add_text_label(name="name",text=self.name)
 
-            self.coords[1] += direction[1]
+        self.add_text_label(name="health",text="{}/{}".format(str(self.health[0]),str(self.health[1])),offset=[32,96])
 
-            self.update_position()
+        self.target = None
 
-        return passable
+    def move(self,direction=[0,0,0]):
+
+##        print("move")
+
+        if self.turn_info["my_turn"]:
+
+            c = [self.coords[0],self.coords[1],self.coords[2]]
+
+            passable = self.check_passable(direction)
+
+            flat_distance = math.sqrt(direction[0]**2 + direction[1]**2)
+
+            distance = math.ceil(math.sqrt(direction[0]**2 + direction[1]**2 + direction[2]**2))
+
+            if passable:
+
+                self.coords[0] += direction[0]
+
+                self.coords[1] += direction[1]
+
+                self.coords[2] += direction[2]
+
+                self.update_position()
+
+                self.parent.move_obj(self,old_pos=c)
+
+                self.turn_action(round(distance/self.speed,3))
+
+##        print(self.turn_info["points"])
 
     def move_to(self,coords=[0,0]):
 
-        passable = self.check_passable(coords,mode="a")
-
-        if passable:
-
-            self.coords[0] = coords[0]
-
-            self.coords[1] = coords[1]
-
-            self.update_position()
-
-    def search_slot(self,slot_name=None):
-
-        if slot_name != None and self.inventory_slots != []:
-
-            for slot in self.inventory_slots:
-
-                if slot.name == slot_name:
-
-                    return slot
-
-    def act_exec(self):
-
-        for action in self.pending_actions:
-
-            action_s = action.split()
-
-            if action_s[0] == "move":
-
-                self.move(direction=[int(action_s[1]),int(action_s[2])])
-
-            if action_s[0] == "move_to":
-
-                self.move_to(coords=[int(action_s[1]),int(action_s[2])])
-
-            if action_s[0] == "attack":
-
-                pass
-
-            self.pending_actions.remove(action)
-
-        if self.in_battle:
-
-            self.my_turn = False
+        pass
 
     def ai_tick(self):
 
-        direction = random.choice([[0,1],[-1,0],[1,0],[0,-1]])
+##        print("ai_tick")
 
-        self.move(direction)
+        directions = [[0,1,0],[-1,0,0],[1,0,0],[0,-1,0]]
 
-        for ent in self.parent.entities:
+        attack = False
 
-            if ent.coords != self.coords:
+        for d in directions:
 
-                print(str(ent.coords) + " " + ent.name)
-                        
-    def tick(self,delta = 100):
+            targets = self.search_coord(position=d,mode="r")
 
-        print(self.pending_actions)
+            if targets != []:
 
-        if self.my_turn:
+                for t in targets:
+
+                    if t.obj_type == "entity" and t.is_alive:
+
+                        print("Attacking {}".format(t.name))
+
+                        self.attack(t)
+
+                        attack = True
+
+                if attack:
+
+                    break
+
+        if not attack:
+
+            self.move(random.choice(directions))
+
+    def turn(self):
+
+        if self.is_alive:
 
             self.ai_tick()
 
-            self.act_exec()
 
-            world.grid_obj.tick(self,delta)
+        self.update_text_label("name",self.name)
 
-        #self.say(self.name,100,[32,128])
+        self.update_text_label("health","{}/{}".format(str(self.health[0]),str(self.health[1])))
+
+    def tick(self,delta = 100):
+            
+        self.update_text_label("name",self.name)
+
+        self.update_text_label("health","{}/{}".format(str(self.health[0]),str(self.health[1])))
+
+        world.grid_obj.tick(self,delta)
 
     def draw(self):
 
@@ -130,7 +137,7 @@ class entity(world.grid_obj):
 
             d_obj.draw_obj.draw(self)
 
-    def change_area(self,new_area=None,spawn=[0,0]):
+    def change_area(self,new_area=None,spawn=[0,0,0]):
 
         if new_area != None:
 
@@ -138,140 +145,244 @@ class entity(world.grid_obj):
 
             self.coords = spawn
 
-    def attack(self,target=[0,0]):
+    def turn_action(self,points=1):
 
-        target = self.search_coords(target)
+        self.turn_info["points"][0] = round(self.turn_info["points"][0] - points,3)
 
-        self.active_weapon.attack(self,target)
+        if self.turn_info["points"][0] <= 0:
 
+            self.turn_info["my_turn"] = False
 
-class basic_ai():
+    def take_damage(self,damage=0,weapon=None,attacker=None):
 
-    def __init__(self,parent=None):
+        stack = 0
 
-        self.parent = parent
+        for l in self.text_labels:
 
-        self.directions = [[0,1],[-1,0],[1,0],[0,-1]]  # N, W, E, S
+            if l.name == "dmg_log":
 
-    def tick(self):
+                stack += 16
+
+        if damage not in ["miss","bounce","nullified","no_damage"]:
+
+            if self.health[0] - damage > 0:
+
+                self.health[0] -= damage
+
+                self.add_text_label(name="dmg_log",text="-{}".format(str(damage)),offset=[32,128 + stack],say_time=2000)
+
+                print("Hit {} with {} for {}".format(self.name,weapon.name,damage))
+
+                return damage
+
+            else:
+
+                taken = self.health[0]
+
+                self.health[0] = 0
+
+                self.die(last_damage=damage,weapon=weapon,attacker=attacker)
+
+                self.add_text_label(name="dmg_log",text="☠ -{} ☠".format(str(damage)),offset=[32,128],say_time=5000)
+
+                print("Hit {} with {} for {}".format(self.name,weapon.name,taken))
+
+                return taken
+
+        else:
+
+            self.add_text_label(name="dmg_log",text=damage,offset=[32,128 + stack],say_time=2000)
+
+            print("Hit {} with {} for... 0".format(self.name,weapon.name))
+
+            return damage
+
+    def reset_turn(self):
+
+        self.turn_info["my_turn"] = True
+
+        self.turn_info["points"][0] = self.turn_info["points"][1]
+                   
+    def die(self,last_damage=0,weapon=None,attacker=None):
+
+        self.is_alive = False
+
+        self.passable = True
+
+        print("{} got rekt by {} with {}".format(self.name,attacker.name,weapon.name))
+
+        self.tbr = True
+
+    def attack(self,target=None):
+
+        distance = math.sqrt((self.coords[0]-target.coords[0])**2 + (self.coords[1]-target.coords[1])**2 + (self.coords[2]-target.coords[2])**2)
+
+        weapon = self.search_slot("current_weapon").item
+
+        print(weapon.name)
+
+        if self.turn_info["my_turn"] and weapon != None:
+##
+##            if self.inv_slots["current_weapon"] != None:
+
+            weapon.attack(self,target,distance,area=self.parent)
+
+            if hasattr(weapon,"fire_rate"):
+
+                self.turn_action(1/weapon.fire_rate)
+
+            else:
+
+                self.turn_action(0.2)
+
+        print("{}'s turn points: {}/{}".format(self.name,self.turn_info["points"][0],self.turn_info["points"][1]))
+
+    def attack_target(self):
+
+        if self.target != None:
+
+            if hasattr(self.target,"health"):
+
+                self.attack(self.target)
+
+            elif type(self.target) in (list,tuple):
+
+                print(self.target)
+
+##    def to_string(self):
+##
+##        slots = []
+##
+##        for slot in self.inv_slots:
+##
+##            slots.append(slot.to_string())
+##
+##        slots = str(slots).replace('"',"")
+##
+##        s = "ent.{}(name='{}',inv_slots={},coords={},sprites={},tags={})".format(self.__class__.__name__,self.name,slots,str(self.coords),str(self.sprites),str(self.tags))
+##
+##        return s
+        
+class player_test(entity):
+
+    def turn(self):
 
         pass
 
+    def attack_selected(self):
 
-class sel_ai(basic_ai):
+        sel = self.parent.selected_object
 
-    def __init__(self,parent=None):
+        if sel != None:
 
-        basic_ai.__init__(self,parent=parent)
+            for o in sel:
 
-    def tick(self,delta=100):
+                if o.obj_type == "entity" and o.is_alive:
 
-        sel = self.parent.parent.selector.coords
+                    self.target = o
 
-        action = "move_to {} {}".format(str(sel[0]),str(sel[1]))
+                    self.attack_target()
 
-        self.parent.give_command(action)
+        else:
 
-class random_ai(basic_ai):
+            self.target = None
 
-    def __init__(self,parent=None):
+    def tick(self,delta = 100):
+            
+        self.update_text_label("name",self.name)
 
-        basic_ai.__init__(self,parent=parent)
+        self.update_text_label("health","{}/{}".format(str(self.health[0]),str(self.health[1])))
 
-    def tick(self,delta=100):
+        world.grid_obj.tick(self,delta)
 
-        direction = random.choice(self.directions)
+    def ai_tick(self):
 
-        action = "move {} {}".format(str(direction[0]),str(direction[1]))
+        pass
 
-        self.parent.give_command(action)
+    def move_attack(self,direction=[0,0,0]):
 
-        self.parent.ready = True
+        targets = self.search_coord(position=direction,mode="r")
 
-        for direction in self.directions:
+        attack = False
 
-            targets = self.parent.search_coord(position=direction,mode="r")
+        if targets != []:
 
-            if targets != []:
+            for t in targets:
 
-                for target in targets:
+                if t.obj_type == "entity" and t.is_alive:
 
-                    if hasattr(target,"health") and not self.parent.in_battle:
+                    print("Attacking {}".format(t.name))
 
-                        self.parent.enter_combat(enemy=target)
+                    self.attack(t)
 
-        basic_ai.tick(self)
+                    attack = True
 
-        
+        if not attack:
 
+            self.move(direction)
+
+
+class npc(entity):
+
+    def __init__(self,coords=[0,0,0],name = "random",race = "human", gender = "female",tags=[["impassable"],["invulnerable"],["passive"]],health=[100,100]):
+
+        entity.__init__(self,coords=coords,name=name,tags=tags,health=health)
+
+        self.str_keys = ["name","coords","inv_slots","tags","items","item"]
+
+        if name == "random":
+
+            if race == "human":
+
+                if gender == "male":
+
+                    first_name = random.choice(["Aaron","Adam","Alan","Adrian","Brandon","Ben","Brian","Benny","Chris","Dennis"])   # to be continued
+
+                    self.tags.append(["male"])
+
+                elif gender == "female":
+
+                    first_name = random.choice(["Anne","Alina","Bella","Caroline","Charlotte","Denise","Ellen"]) # to be continued
+
+                    self.tags.append(["female"])
+
+                last_name = random.choice(["Adams","Baker","Clares"])  # to be continued
+
+            elif race == "harpy":
+
+                pass
+
+            elif race == "centaur":
+
+                pass
+
+            elif race == "lamia":
+
+                pass
+
+            elif race == "elf":
+
+                pass
+
+            elif race == "dwarf":
+
+                pass
+
+            elif race == "merfolk":
+
+                pass
+
+        self.name = first_name + " " + last_name
+
+        self.gender = gender
+
+        self.race = race
                 
 
-                
+class dummy(npc):
 
-            
+    def ai_tick(self):
 
+        self.turn_action(1)
             
-        
-##class combat_entity(entity):
-##
-##    def __init__(self,name="Storm",sprites={"default":".//sprites//entities//storm.png"},coords=[0,0,0],tags=[],visible=True,inventory_slots=[],
-##                 health=[500,500],energy=[100,100],air_mana=[75,75],ai = None):
-##
-##        entity.__init__(self,sprites=sprites,coords=coords,tags=tags,visible=visible,ai=ai,inventory_slots=inventory_slots)
-##
-##        self.name = name
-##
-##        self.energy = energy
-##
-##        self.health = health
-##
-##        self.obj_type = "combat_entity"
-##
-##        weapon = self.search_slot("current_weapon")
-##
-##        weapon = weapon.item
-##
-##        self.in_battle = False
-##
-##        self.ready = False
-##
-##    def attack(self,target=[0,0]):
-##    
-##        weapon = self.search_slot("current_weapon")
-##
-##        weapon = weapon.item
-##
-##        target = self.search_coords(target)
-##
-##        weapon.attack(self,target)
-##
-##    def draw(self):
-##
-##        d_obj.draw_obj.draw(self)
-##
-##        if self.is_alive == True:
-##
-##            self.say(str(self.health[0])+ "/" + str(self.health[1]),10,[32,112])
-##
-##    def give_command(self,command = None):
-##
-##        if command != None:
-##
-##            self.pending_actions.append(command)
-##
-##    def tick(self,delta):
-##
-##        if self.is_alive == True:
-##
-##            entity.tick(self,delta)
-##
-##            self.say(str(self.health[0])+ "/" + str(self.health[1]),100,[32,112])
-##
-##    def take_damage(self,amount=10):
-##
-##        self.health[0] -= amount
-##
-##        if self.health[0] <= 0:
-##
-##            self.is_alive = False
 

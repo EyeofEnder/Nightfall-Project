@@ -8,9 +8,25 @@ import pyglet
 
 import random
 
+class text_label(pyglet.text.Label):
+
+    def __init__(self,text="test",position=[0,0],time=None,name="test",offset = [0,0]):
+
+        self.time = time
+
+        self.name = name
+
+        self.offset = offset
+
+        pyglet.text.Label.__init__(self,x=position[0],y=position[1],text=text,anchor_x = "center")
+
+        
+
+        
+
 class draw_obj():
 
-    def __init__(self,position=[0,0],visible=True,sprites={"default":".//sprites//test_sprite.png"},global_layer="world",local_layer=1,tile_layer=0,opacity=255,text_label=""):
+    def __init__(self,position=[0,0],visible=True,sprites={"default":".//sprites//test_sprite.png"},global_layer="world",local_layer=1,tile_layer=0,opacity=255):
 
         self.position = position
 
@@ -26,7 +42,13 @@ class draw_obj():
 
         self.sprite_images = {}
 
+        self.sprites = sprites
+
         self.sprite_paths = sprites
+
+        self.str_keys = ["name","coords","sprites","inv_slots","tags","items","item"]
+
+        self.module = "draw_obj"
 
         for sprite in sprites:
 
@@ -38,7 +60,7 @@ class draw_obj():
         
         self.tile_layer = tile_layer
 
-        #self.text_labels = [[pyglet.text.Label(str(self.position),x=self.position[0]+32,y=self.position[1]+112,anchor_x="center",anchor_y="bottom",width = 480,multiline=False),True,100,0,0]] # label object, visible, say time in ms, x offset, y offset
+        ## label object, visible, say time in ms, x offset, y offset
 
         self.text_labels = []
 
@@ -48,27 +70,46 @@ class draw_obj():
 
         if self.visible:
 
-            self.sprite.x = self.position[0]
-
-            self.sprite.y = self.position[1]
-
             self.sprite.opacity = self.opacity
 
             self.sprite.draw()
 
             for label in self.text_labels:
 
-                if label[1]:
+##                if label["visible"]:
+##
+##                    label["label"].x=self.position[0]+label["x_offset"]
+##
+##                    label["label"].y=self.position[1]+label["y_offset"]
+##
+##                    label["label"].draw()
+##
+                label.x=self.position[0]+label.offset[0]
 
-                    label[0].x=self.position[0]+label[3]
+                label.y=self.position[1]+label.offset[1]
 
-                    label[0].y=self.position[1]+label[4]
+                label.draw()
 
-                    label[0].draw()
+    def add_text_label(self,name = "name",say_time=None,offset=[32,112],text=None):
 
-    def say(self,text="test",say_time=10,offset=[32,112]):
+##        self.text_labels.append({"label":pyglet.text.Label(text,x=self.position[0]+offset[0],y=self.position[1]+offset[1],anchor_x="center"),"name":name,"say_time":say_time,"visible":True,"x_offset":offset[0],"y_offset":offset[1]})
 
-        self.text_labels.append([pyglet.text.Label(text,x=self.position[0]+offset[0],y=self.position[1]+offset[1],anchor_x="center"),True,say_time,offset[0],offset[1]])
+        self.text_labels.append(text_label(name=name,text=text,time=say_time,position=[self.position[0] + offset[0],self.position[1] + offset[1]],offset=offset))
+
+    def update_text_label(self,name=None,text=None):
+
+        if name != None:
+
+            for label in self.text_labels:
+
+##                if label["name"] == name:
+##
+##                    label["label"].text = text
+
+                 if label.name == name:
+
+                    label.text = text
+
 
     def load_sprite(self,sprite_path = ".//sprites//test_sprite.png",name = "test"):   # loads from file path
 
@@ -82,8 +123,6 @@ class draw_obj():
 
             self.sprite_images[name] = sprite
 
-            
-
     def change_sprite(self,name = "default"):
 
         self.sprite.image = self.sprite_images[name]
@@ -92,83 +131,132 @@ class draw_obj():
 
     def tick(self,delta=100): # delta time in ms
 
-        for label in self.text_labels:
+        if self.text_labels != []:
 
-            if label[1] and label[2] > 0:
+            for label in self.text_labels:
 
-                label[2] -= delta
+##                if label["say_time"] != None:
+##
+##                    if label["visible"] and label["say_time"] > 0:
+##
+##                        label["say_time"] -= delta
+##
+##                    if label["visible"] and label["say_time"] <= 0:
+##
+##                        self.text_labels.remove(label)
 
-            if label[1] and label[2] <= 0:
+                 if label.time != None:
 
-                self.text_labels.remove(label)
+                    if label.time > 0:
 
-    def __str__(self):
+                        label.time -= delta
 
-        s = self.obj_type
+                    if label.time <= 0:
 
-        return s
+                        self.text_labels.remove(label)
+
+
+    def to_string(self):
+
+        s = self.__class__.__name__
+
+        a = self.__dict__
+        
+        a_filtered = {}
+
+        at = []
+
+        for key in a.keys():
+
+            a_e = a[key]
+
+            if key in self.str_keys:
+
+                a_filtered[key] = a_e
+
+##        print(str(s) + " " + str(a1))
+
+        for key in a_filtered.keys():
+
+            a_e = a_filtered[key]
+
+            if hasattr(a_e,"to_string"):
+
+                a_e = a_e.to_string()
+
+                at.append("{}={}".format(key,a_e))
+
+            elif type(a_e) == list:
+
+                l = "["
+
+                index = 0
+
+                for e in a_e:
+
+                    if hasattr(e,"to_string"):
+
+                        l += e.to_string()
+
+                    else:
+
+                        l += str(e) 
+
+                    if index < len(a_e) - 1:
+
+                        l += ","
+
+                    index += 1
+
+                l += "]"
+
+                at.append("{}={}".format(key,l))
+
+            elif type(a_e) == str:
+
+                at.append("{}='{}'".format(key,a_e))
+
+            else:
+
+                at.append("{}={}".format(key,a_e))
+
+##        print(self.module)
+
+        ats = "{}(".format(s)
+
+        index = 0
+
+        ats += "\n"
+
+        for e in at:
+
+            ats += (e) 
+##
+##            if index < len(at) - 1:
+##
+##               ats += ","
+
+            ats += "\n"
+
+            index += 1
+
+        ats += ")\n"
+
+##        print("")
+##
+####        print(ats)
+##
+##        print("")
+
+            
+
+        return ats
 
         
 
 
                 
 
-## ------ Old code, requires sprite module -----
 
-##class draw_obj():
-##
-##    def __init__(self,position=[0,0],visible=True,sprite_path=".//sprites//test_sprite.png",sprite_image=None,global_layer="world",local_layer=1,tile_layer=0,opacity=255,text_label=""):
-##
-##        self.position = position
-##
-##        self.visible = visible
-##
-##        self.sprite_path = sprite_path
-##
-##        self.sprite_image = sprite_image
-##
-##        self.global_layer = global_layer
-##
-##        self.local_layer = local_layer
-##
-##        self.opacity = opacity
-##
-##        self.sprite = sprite.sprite(parent=self)
-##        
-##        self.tile_layer = tile_layer
-##
-##        self.text_labels = [[pyglet.text.Label(str(self.position),x=self.position[0]+32,y=self.position[1]+112,anchor_x="center",anchor_y="bottom",width = 480,multiline=False),True,100,0,0]]  # label object, visible, say time in ms, x offset, y offset
-##
-##    def draw(self):
-##
-##        if self.visible:
-##
-##            self.sprite.draw()
-##
-##            for label in self.text_labels:
-##
-##                if label[1]:
-##
-##                    label[0].x=self.position[0]+label[3]
-##
-##                    label[0].y=self.position[1]+label[4]
-##
-##                    label[0].draw()
-##
-##    def say(self,text="test",say_time=10,offset=[32,112]):
-##
-##        self.text_labels.append([pyglet.text.Label(text,x=self.position[0]+offset[0],y=self.position[1]+offset[1],anchor_x="center"),True,say_time,offset[0],offset[1]])
-##
-##    def tick(self,delta=100): # delta time in ms
-##
-##        for label in self.text_labels:
-##
-##            if label[1] and label[2] > 0:
-##
-##                label[2] -= delta
-##
-##            if label[1] and label[2] <= 0:
-##
-##                self.text_labels.remove(label)
 
         

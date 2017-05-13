@@ -1,3 +1,5 @@
+import math
+
 def read_text_file(file_path = None,linewise = True):
 
     file = None
@@ -81,7 +83,13 @@ class interpolate():
 
                 last_node = node
 
-    
+def distance_3d(distances=[0,0,0]):
+
+    flat_distance = math.sqrt(direction[0]**2 + direction[1]**2)
+
+    distance = math.ceil(math.sqrt(flat_distance**2 + direction[2]**2))
+
+    return distance
 
             
 
